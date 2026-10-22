@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sephiria Insight</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">S</div>
+          <div>
+            <strong>Sephiria</strong>
+            <span>Insight Agent</span>
+          </div>
+        </div>
+
+        <nav class="main-nav" aria-label="주 메뉴">
+          <button class="nav-item active" data-view="overview"><span>◈</span> 대시보드</button>
+          <button class="nav-item" data-view="chat"><span>✦</span> AI 분석 대화</button>
+          <button class="nav-item" data-view="data"><span>▦</span> 데이터 탐색</button>
+          <button class="nav-item" data-view="history"><span>◷</span> 대화 기록</button>
+        </nav>
+
+        <div class="sidebar-note">
+          <span class="status-dot"></span>
+          <div>
+            <strong>로컬 분석 모드</strong>
+            <small>FastAPI + 커스텀 AI 연결됨</small>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">GAME DATA INTELLIGENCE</p>
+            <h1 id="page-title">세피리아 분석 대시보드</h1>
+          </div>
+          <div class="topbar-actions">
+            <span class="data-badge"><span class="status-dot"></span> Firestore 데이터 연결됨</span>
+            <button class="icon-button" id="refresh-button" title="데이터 새로고침">↻</button>
+          </div>
+        </header>
+
+        <section class="view active" id="overview-view">
+          <div class="hero-card">
+            <div>
+              <p class="eyebrow accent">ANALYSIS OVERVIEW</p>
+              <h2>패치가 플레이어 반응에<br />어떤 변화를 만들었을까요?</h2>
+              <p class="hero-copy">플레이어 수를 중심으로 가격, 패치, 허브 팔로워 데이터를 함께 살펴보세요.</p>
+              <button class="primary-button" data-go-view="chat">AI에게 질문하기 <span>→</span></button>
+            </div>
+            <div class="hero-orbit" aria-hidden="true">
+              <div class="orbit orbit-one"></div>
+              <div class="orbit orbit-two"></div>
+              <div class="orbit-core">AI</div>
+              <span class="orbit-label label-player">Players</span>
+              <span class="orbit-label label-patch">Patch</span>
+              <span class="orbit-label label-price">Price</span>
+              <span class="orbit-label label-hub">Hub</span>
+            </div>
+          </div>
+
+          <div class="metric-grid" id="metric-grid"></div>
+
+          <div class="content-grid overview-grid">
+            <article class="panel chart-panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">PLAYER TREND</p><h3>일별 플레이어 추세</h3></div>
+                <span class="panel-chip">최근 12개월</span>
+              </div>
+              <div class="chart-wrap" id="player-chart"></div>
+              <div class="chart-legend"><span><i class="legend-line"></i> 평균 플레이어</span><span><i class="legend-dot"></i> 주요 패치</span></div>
+            </article>
+
+            <article class="panel insight-panel">
+              <div class="panel-heading"><div><p class="eyebrow">AI HIGHLIGHTS</p><h3>주요 인사이트</h3></div><span class="sparkle">✦</span></div>
+              <div class="insight-list" id="insight-list"></div>
+              <button class="text-button" data-go-view="chat">전체 분석 대화하기 <span>→</span></button>
+            </article>
+          </div>
+
+          <div class="content-grid lower-grid">
+            <article class="panel patch-panel">
+              <div class="panel-heading"><div><p class="eyebrow">PATCH RESPONSE</p><h3>주요 패치 반응</h3></div><button class="text-button" data-go-view="data">전체 보기 →</button></div>
+              <div class="table-scroll"><table><thead><tr><th>패치</th><th>날짜</th><th>7일 변화율</th><th>상태</th></tr></thead><tbody id="patch-table"></tbody></table></div>
+            </article>
+            <article class="panel data-sources-panel">
+              <div class="panel-heading"><div><p class="eyebrow">DATA SOURCES</p><h3>분석에 사용한 데이터</h3></div></div>
+              <div class="source-list" id="source-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="chat-view">
+          <div class="section-intro"><p class="eyebrow accent">AI ANALYST</p><h2>데이터에게 질문해보세요</h2><p>로컬 FastAPI가 CSV 분석 요약을 커스텀 AI 제공자에 전달해 답변합니다.</p></div>
+          <div class="chat-layout">
+            <div class="panel chat-panel">
+              <div class="chat-messages" id="chat-messages">
+                <div class="message assistant"><div class="avatar">✦</div><div><span class="message-label">SEPHIRIA AI</span><p>안녕하세요! 플레이어 수, 가격, 패치, 허브 데이터를 바탕으로 분석해드릴게요. 무엇이 궁금한가요?</p></div></div>
+              </div>
+              <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="예: 가장 효과가 컸던 패치는 뭐야?" autocomplete="off" /><button class="primary-button" type="submit">질문 보내기 <span>↑</span></button></form>
+            </div>
+            <aside class="panel prompt-panel"><p class="eyebrow">SUGGESTED QUESTIONS</p><h3>이렇게 물어보세요</h3><div class="suggestion-list"><button data-question="가장 효과가 컸던 패치는 뭐야?">가장 효과가 컸던 패치는?</button><button data-question="가격 할인 기간에 플레이어 수가 늘었어?">가격과 플레이어 수의 관계는?</button><button data-question="플레이어 수와 허브 팔로워가 같이 증가한 패치는?">플레이어와 허브가 함께 오른 패치는?</button><button data-question="최근 플레이어 수 추세는 어때?">최근 추세를 요약해줘</button></div></aside>
+          </div>
+        </section>
+
+        <section class="view" id="data-view">
+          <div class="section-intro"><p class="eyebrow accent">DATA EXPLORER</p><h2>분석 데이터 탐색</h2><p>M1 분석 결과와 원본 데이터의 요약을 한 곳에서 확인합니다.</p></div>
+          <div class="filter-bar panel"><div class="segmented-control"><button class="active" data-filter="all">전체</button><button data-filter="patch">패치</button><button data-filter="price">가격</button><button data-filter="hub">허브</button></div><span class="record-count" id="record-count"></span></div>
+          <div class="panel data-table-panel"><div class="table-scroll"><table><thead><tr><th>구분</th><th>날짜</th><th>항목</th><th>값</th><th>메모</th></tr></thead><tbody id="data-table"></tbody></table></div></div>
+        </section>
+
+        <section class="view" id="history-view">
+          <div class="section-intro"><p class="eyebrow accent">CONVERSATION HISTORY</p><h2>대화 기록</h2><p>AI에게 물어본 분석 질문을 확인합니다.</p></div>
+          <div class="panel history-panel" id="history-list"><div class="empty-state"><span>◷</span><h3>아직 저장된 대화가 없습니다</h3><p>AI 분석 대화에서 질문을 보내면 이곳에 기록됩니다.</p><button class="primary-button" data-go-view="chat">첫 질문 시작하기</button></div></div>
+        </section>
+
+        <footer class="footer"><span>Sephiria Insight Agent</span><span>Local Frontend Preview · M1 Analysis Data</span></footer>
+      </main>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>
