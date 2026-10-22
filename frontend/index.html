@@ -27,8 +27,8 @@
         <div class="sidebar-note">
           <span class="status-dot"></span>
           <div>
-            <strong>로컬 분석 모드</strong>
-            <small>FastAPI + 커스텀 AI 연결됨</small>
+            <strong>Firestore 분석 모드</strong>
+            <small>DB + 커스텀 AI 연결됨</small>
           </div>
         </div>
       </aside>
@@ -96,7 +96,7 @@
         </section>
 
         <section class="view" id="chat-view">
-          <div class="section-intro"><p class="eyebrow accent">AI ANALYST</p><h2>데이터에게 질문해보세요</h2><p>로컬 FastAPI가 CSV 분석 요약을 커스텀 AI 제공자에 전달해 답변합니다.</p></div>
+          <div class="section-intro"><p class="eyebrow accent">AI ANALYST</p><h2>데이터에게 질문해보세요</h2><p>Firestore의 최신 분석 데이터를 커스텀 AI 제공자에 전달해 답변합니다.</p></div>
           <div class="chat-layout">
             <div class="panel chat-panel">
               <div class="chat-messages" id="chat-messages">
@@ -110,8 +110,15 @@
 
         <section class="view" id="data-view">
           <div class="section-intro"><p class="eyebrow accent">DATA EXPLORER</p><h2>분석 데이터 탐색</h2><p>M1 분석 결과와 원본 데이터의 요약을 한 곳에서 확인합니다.</p></div>
+          <form class="panel data-entry-form" id="data-form">
+            <input id="data-type" placeholder="구분 (players, prices, patches, hub)" required />
+            <input id="data-date" type="date" required />
+            <input id="data-value" placeholder="값" required />
+            <input id="data-memo" placeholder="메모" />
+            <button class="primary-button" type="submit">Firestore에 추가</button>
+          </form>
           <div class="filter-bar panel"><div class="segmented-control"><button class="active" data-filter="all">전체</button><button data-filter="patch">패치</button><button data-filter="price">가격</button><button data-filter="hub">허브</button></div><span class="record-count" id="record-count"></span></div>
-          <div class="panel data-table-panel"><div class="table-scroll"><table><thead><tr><th>구분</th><th>날짜</th><th>항목</th><th>값</th><th>메모</th></tr></thead><tbody id="data-table"></tbody></table></div></div>
+          <div class="panel data-table-panel"><div class="table-scroll"><table><thead><tr><th>구분</th><th>날짜</th><th>항목</th><th>값</th><th>메모</th><th>관리</th></tr></thead><tbody id="data-table"></tbody></table></div></div>
         </section>
 
         <section class="view" id="history-view">
@@ -119,7 +126,7 @@
           <div class="panel history-panel" id="history-list"><div class="empty-state"><span>◷</span><h3>아직 저장된 대화가 없습니다</h3><p>AI 분석 대화에서 질문을 보내면 이곳에 기록됩니다.</p><button class="primary-button" data-go-view="chat">첫 질문 시작하기</button></div></div>
         </section>
 
-        <footer class="footer"><span>Sephiria Insight Agent</span><span>Local Frontend Preview · M1 Analysis Data</span></footer>
+        <footer class="footer"><span>Sephiria Insight Agent</span><span>Firestore Data · M1 Analysis Context</span></footer>
       </main>
     </div>
     <script src="./app.js"></script>

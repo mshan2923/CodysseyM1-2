@@ -32,24 +32,16 @@ Firebase 콘솔에서 서비스 계정 키 JSON을 내려받아 `backend/firebas
 - Summary: http://localhost:8000/api/data/summary
 - Swagger: http://localhost:8000/docs
 
-## 4. Firestore에 CSV 업로드
+## 4. Firestore 데이터
 
-서버가 실행 중일 때 다음 요청으로 현재 CSV 데이터를 한 번 업로드합니다.
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8000/api/admin/seed -Method Post
-```
-
-데이터는 각각 `players`, `prices`, `patches`, `events`, `hub` 컬렉션에 저장됩니다. 기존에 사용하던 `analysis_data` 컬렉션은 삭제하지 않습니다.
-
-예상 결과는 플레이어, 가격, 패치, 이벤트, 허브별 업로드 건수입니다. 업로드 후 아래 API는 Firestore 데이터를 우선 읽습니다.
+운영 서버는 CSV에 의존하지 않고 Firestore만 사용합니다. 분석 데이터는 `data` 컬렉션에 수동 입력할 수 있고, 기존 source별 컬렉션(`players`, `prices`, `patches`, `events`, `hub`)도 읽을 수 있습니다.
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/api/data/summary
 Invoke-RestMethod 'http://127.0.0.1:8000/api/data?source=patches&limit=10'
 ```
 
-## 5. 채팅 테스트
+## 5. 데이터 CRUD 및 채팅 테스트
 
 ```powershell
 Invoke-RestMethod http://localhost:8000/api/chat `
@@ -58,4 +50,4 @@ Invoke-RestMethod http://localhost:8000/api/chat `
   -Body '{"message":"가장 효과가 컸던 패치는 뭐야?"}'
 ```
 
-프론트엔드는 `/api/chat`을 호출하며, 채팅 컨텍스트의 분석 요약도 Firestore를 우선 사용합니다.
+프론트엔드는 `/api/data`, `/api/data/summary`, `/api/chat`을 호출하며, 채팅 컨텍스트와 대시보드 수치는 모두 Firestore에서 읽습니다.

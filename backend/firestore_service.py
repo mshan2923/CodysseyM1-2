@@ -4,8 +4,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from data_service import EVENT_FILE, HUB_FILE, PATCH_FILE, PLAYER_FILE, PRICE_FILE, read_csv
-
 
 COLLECTIONS = {
     "players": "players",
@@ -14,6 +12,8 @@ COLLECTIONS = {
     "events": "events",
     "hub": "hub",
 }
+DATA_COLLECTION = "data"
+CONVERSATIONS_COLLECTION = "conversations"
 
 
 def _collection_name(source: str) -> str:
@@ -58,54 +58,6 @@ def _value(value: str) -> Any:
         return value
 
 
-def _normalized_rows(source: str, path: Path) -> list[dict[str, Any]]:
-    rows = read_csv(path)
-    result = []
-    for index, row in enumerate(rows):
-        normalized = {key: _value(value) for key, value in row.items()}
-        date_value = row.get("date") or row.get("DateTime", "")[:10]
-        normalized.update({
-            "source": source,
-            "source_file": path.name,
-            "source_index": index,
-            "date": date_value,
-            "imported_at": datetime.now(timezone.utc),
-        })
-        result.append(normalized)
-    return result
-
-
-def seed_csv_data() -> dict[str, int]:
-    client = _client()
-    sources = {
-        "players": PLAYER_FILE,
-        "prices": PRICE_FILE,
-        "patches": PATCH_FILE,
-        "events": EVENT_FILE,
-        "hub": HUB_FILE,
-    }
-    counts: dict[str, int] = {}
-    batch = client.batch()
-    batch_size = 0
-
-    for source, path in sources.items():
-        collection = client.collection(_collection_name(source))
-        rows = _normalized_rows(source, path)
-        counts[source] = len(rows)
-        for row in rows:
-            document_id = f"{source}_{row['source_index']:05d}"
-            batch.set(collection.document(document_id), row)
-            batch_size += 1
-            if batch_size == 450:
-                batch.commit()
-                batch = client.batch()
-                batch_size = 0
-
-    if batch_size:
-        batch.commit()
-    return counts
-
-
 def read_firestore_rows(source: str | None = None, limit: int = 5000) -> list[dict[str, Any]]:
     client = _client()
     sources = [source] if source else list(COLLECTIONS)
@@ -118,6 +70,80 @@ def read_firestore_rows(source: str | None = None, limit: int = 5000) -> list[di
         if len(rows) >= limit:
             return rows[:limit]
     return rows
+
+
+def _data_rows(limit: int = 5000) -> list[dict[str, Any]]:
+    client = _client()
+    query = client.collection(DATA_COLLECTION).limit(limit)
+    return [{"id": doc.id, **doc.to_dict()} for doc in query.stream()]
+
+
+def read_analysis_rows(source: str | None = None, limit: int = 5000) -> list[dict[str, Any]]:
+    """운영 데이터는 Firestore만 읽는다. 기존 source별 컬렉션과 수동 입력 data를 모두 지원한다."""
+    rows = read_firestore_rows(source, limit)
+    if rows:
+        return rows
+    manual = _data_rows(limit)
+    if source:
+        manual = [row for row in manual if row.get("type") == source]
+    return manual[:limit]
+
+
+def create_data_record(record: dict[str, Any]) -> str:
+    client = _client()
+    ref = client.collection(DATA_COLLECTION).document()
+    record = {**record, "created_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc)}
+    ref.set(record)
+    return ref.id
+
+
+def update_data_record(record_id: str, record: dict[str, Any]) -> None:
+    client = _client()
+    ref = client.collection(DATA_COLLECTION).document(record_id)
+    if not ref.get().exists:
+        raise KeyError(record_id)
+    ref.set({**record, "updated_at": datetime.now(timezone.utc)}, merge=True)
+
+
+def delete_data_record(record_id: str) -> None:
+    client = _client()
+    ref = client.collection(DATA_COLLECTION).document(record_id)
+    if not ref.get().exists:
+        raise KeyError(record_id)
+    ref.delete()
+
+
+def create_conversation(title: str, messages: list[dict[str, Any]]) -> str:
+    client = _client()
+    ref = client.collection(CONVERSATIONS_COLLECTION).document()
+    now = datetime.now(timezone.utc)
+    ref.set({"title": title, "messages": messages, "created_at": now, "updated_at": now})
+    return ref.id
+
+
+def read_conversations(limit: int = 50) -> list[dict[str, Any]]:
+    client = _client()
+    docs = client.collection(CONVERSATIONS_COLLECTION).order_by("updated_at", direction="DESCENDING").limit(limit).stream()
+    return [{"id": doc.id, **doc.to_dict()} for doc in docs]
+
+
+def read_conversation(conversation_id: str) -> dict[str, Any] | None:
+    doc = _client().collection(CONVERSATIONS_COLLECTION).document(conversation_id).get()
+    return {"id": doc.id, **doc.to_dict()} if doc.exists else None
+
+
+def update_conversation(conversation_id: str, messages: list[dict[str, Any]]) -> None:
+    ref = _client().collection(CONVERSATIONS_COLLECTION).document(conversation_id)
+    if not ref.get().exists:
+        raise KeyError(conversation_id)
+    ref.set({"messages": messages, "updated_at": datetime.now(timezone.utc)}, merge=True)
+
+
+def delete_conversation(conversation_id: str) -> None:
+    ref = _client().collection(CONVERSATIONS_COLLECTION).document(conversation_id)
+    if not ref.get().exists:
+        raise KeyError(conversation_id)
+    ref.delete()
 
 
 def firestore_is_configured() -> bool:
