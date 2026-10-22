@@ -10,7 +10,7 @@ from firestore_service import (
     firestore_is_configured, read_analysis_rows, read_conversation, read_conversations,
     update_conversation, update_data_record,
 )
-from firestore_summary import get_firestore_summary
+from firestore_summary import clear_summary_cache, get_firestore_summary
 from schemas import ChatRequest, ChatResponse, ConversationCreate, ConversationUpdate, DataRecord, HealthResponse
 
 
@@ -79,7 +79,9 @@ async def data_create(record: DataRecord) -> dict:
         raise HTTPException(status_code=503, detail="Firebase 인증 설정이 필요합니다.")
     try:
         payload = record.model_dump()
-        return {"id": create_data_record(payload), **payload}
+        record_id = create_data_record(payload)
+        clear_summary_cache()
+        return {"id": record_id, **payload}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Firestore create failed: {exc}") from exc
 
@@ -89,6 +91,7 @@ async def data_update(record_id: str, record: DataRecord) -> dict:
     try:
         payload = record.model_dump()
         update_data_record(record_id, payload)
+        clear_summary_cache()
         return {"id": record_id, **payload}
     except KeyError:
         raise HTTPException(status_code=404, detail="데이터를 찾을 수 없습니다.")
@@ -100,6 +103,7 @@ async def data_update(record_id: str, record: DataRecord) -> dict:
 async def data_delete(record_id: str) -> dict:
     try:
         delete_data_record(record_id)
+        clear_summary_cache()
         return {"status": "deleted", "id": record_id}
     except KeyError:
         raise HTTPException(status_code=404, detail="데이터를 찾을 수 없습니다.")

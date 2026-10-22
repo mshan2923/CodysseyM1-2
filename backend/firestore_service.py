@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,8 @@ COLLECTIONS = {
 }
 DATA_COLLECTION = "data"
 CONVERSATIONS_COLLECTION = "conversations"
+_ROWS_CACHE: dict[tuple[str | None, int], tuple[float, list[dict[str, Any]]]] = {}
+_CACHE_SECONDS = 300
 
 
 def _collection_name(source: str) -> str:
@@ -80,13 +83,24 @@ def _data_rows(limit: int = 5000) -> list[dict[str, Any]]:
 
 def read_analysis_rows(source: str | None = None, limit: int = 5000) -> list[dict[str, Any]]:
     """운영 데이터는 Firestore만 읽는다. 기존 source별 컬렉션과 수동 입력 data를 모두 지원한다."""
+    cache_key = (source, limit)
+    cached = _ROWS_CACHE.get(cache_key)
+    if cached and time.monotonic() - cached[0] < _CACHE_SECONDS:
+        return cached[1]
     rows = read_firestore_rows(source, limit)
     if rows:
+        _ROWS_CACHE[cache_key] = (time.monotonic(), rows)
         return rows
     manual = _data_rows(limit)
     if source:
         manual = [row for row in manual if row.get("type") == source]
-    return manual[:limit]
+    manual = manual[:limit]
+    _ROWS_CACHE[cache_key] = (time.monotonic(), manual)
+    return manual
+
+
+def clear_read_cache() -> None:
+    _ROWS_CACHE.clear()
 
 
 def create_data_record(record: dict[str, Any]) -> str:
@@ -94,6 +108,7 @@ def create_data_record(record: dict[str, Any]) -> str:
     ref = client.collection(DATA_COLLECTION).document()
     record = {**record, "created_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc)}
     ref.set(record)
+    clear_read_cache()
     return ref.id
 
 
@@ -103,6 +118,7 @@ def update_data_record(record_id: str, record: dict[str, Any]) -> None:
     if not ref.get().exists:
         raise KeyError(record_id)
     ref.set({**record, "updated_at": datetime.now(timezone.utc)}, merge=True)
+    clear_read_cache()
 
 
 def delete_data_record(record_id: str) -> None:
@@ -111,6 +127,7 @@ def delete_data_record(record_id: str) -> None:
     if not ref.get().exists:
         raise KeyError(record_id)
     ref.delete()
+    clear_read_cache()
 
 
 def create_conversation(title: str, messages: list[dict[str, Any]]) -> str:

@@ -1,6 +1,15 @@
 from typing import Any
+import time
 
 from firestore_service import read_analysis_rows
+
+_SUMMARY_CACHE: tuple[float, dict] | None = None
+_CACHE_SECONDS = 300
+
+
+def clear_summary_cache() -> None:
+    global _SUMMARY_CACHE
+    _SUMMARY_CACHE = None
 
 
 def _numbers(rows: list[dict[str, Any]], key: str) -> list[float]:
@@ -13,6 +22,9 @@ def _numbers(rows: list[dict[str, Any]], key: str) -> list[float]:
 
 
 def get_firestore_summary() -> dict:
+    global _SUMMARY_CACHE
+    if _SUMMARY_CACHE and time.monotonic() - _SUMMARY_CACHE[0] < _CACHE_SECONDS:
+        return _SUMMARY_CACHE[1]
     players = read_analysis_rows("players")
     prices = read_analysis_rows("prices")
     patches = read_analysis_rows("patches")
@@ -23,7 +35,7 @@ def get_firestore_summary() -> dict:
     followers = sorted(hubs, key=lambda row: str(row.get("date", "")))
     follower_values = _numbers(followers, "Followers") or _numbers(followers, "value")
 
-    return {
+    summary = {
         "source": "firestore",
         "period": _period(players, prices, patches, events, hubs),
         "counts": {
@@ -41,6 +53,8 @@ def get_firestore_summary() -> dict:
             "latest_hub_followers": follower_values[-1] if follower_values else None,
         },
     }
+    _SUMMARY_CACHE = (time.monotonic(), summary)
+    return summary
 
 
 def _period(*groups: list[dict[str, Any]]) -> str:

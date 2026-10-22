@@ -53,7 +53,7 @@ async function loadDashboardData() {
   try {
     const [summaryResponse, dataResponse] = await Promise.all([
       fetch(`${API_BASE_URL}/api/data/summary`),
-      fetch(`${API_BASE_URL}/api/data?limit=5000`),
+      fetch(`${API_BASE_URL}/api/data?limit=300`),
     ]);
     if (!summaryResponse.ok || !dataResponse.ok) throw new Error('Firestore 데이터를 불러오지 못했습니다.');
     state.summary = await summaryResponse.json();
