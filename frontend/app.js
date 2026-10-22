@@ -35,7 +35,7 @@ const demo = {
   chart: [32, 34, 30, 37, 40, 38, 45, 42, 48, 57, 61, 66, 74, 70, 78, 91, 87, 98, 100, 92, 84, 77, 72, 69],
 };
 
-const API_BASE_URL = 'http://127.0.0.1:8001';
+const API_BASE_URL = 'https://codysseym1-2-dvg7.onrender.com';
 const state = { conversations: [], currentFilter: 'all', isSending: false };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -114,7 +114,7 @@ async function sendMessage(question) {
     state.conversations.push({ question, answer, date: new Date().toLocaleString('ko-KR') });
     renderHistory();
   } catch (error) {
-    document.getElementById(loadingId).outerHTML = `<div class="message assistant error-message"><div class="avatar">!</div><div><span class="message-label">BACKEND ERROR</span><p>${escapeHtml(error.message)}<br><small>FastAPI가 http://127.0.0.1:8000 에서 실행 중인지, backend/.env의 AI_API_KEY가 설정됐는지 확인하세요.</small></p></div></div>`;
+    document.getElementById(loadingId).outerHTML = `<div class="message assistant error-message"><div class="avatar">!</div><div><span class="message-label">BACKEND ERROR</span><p>${escapeHtml(error.message)}<br><small>백엔드 주소, CORS, Render 환경변수를 확인하세요.</small></p></div></div>`;
   } finally {
     state.isSending = false;
   }
