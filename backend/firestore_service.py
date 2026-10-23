@@ -16,7 +16,7 @@ COLLECTIONS = {
 DATA_COLLECTION = "data"
 CONVERSATIONS_COLLECTION = "conversations"
 _ROWS_CACHE: dict[tuple[str | None, int], tuple[float, list[dict[str, Any]]]] = {}
-_CACHE_SECONDS = 300
+_CACHE_SECONDS = 3600
 
 
 def _collection_name(source: str) -> str:

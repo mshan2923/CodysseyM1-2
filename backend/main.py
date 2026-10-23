@@ -20,6 +20,11 @@ _CHAT_CONTEXT_CACHE: tuple[float, str] | None = None
 _CHAT_CONTEXT_CACHE_SECONDS = 3600
 
 
+def _clear_chat_context_cache() -> None:
+    global _CHAT_CONTEXT_CACHE
+    _CHAT_CONTEXT_CACHE = None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.ai_service = CustomAIService(settings)
@@ -87,6 +92,7 @@ async def data_create(record: DataRecord) -> dict:
         payload = record.model_dump()
         record_id = create_data_record(payload)
         clear_summary_cache()
+        _clear_chat_context_cache()
         return {"id": record_id, **payload}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Firestore create failed: {exc}") from exc
@@ -98,6 +104,7 @@ async def data_update(record_id: str, record: DataRecord) -> dict:
         payload = record.model_dump()
         update_data_record(record_id, payload)
         clear_summary_cache()
+        _clear_chat_context_cache()
         return {"id": record_id, **payload}
     except KeyError:
         raise HTTPException(status_code=404, detail="데이터를 찾을 수 없습니다.")
@@ -110,6 +117,7 @@ async def data_delete(record_id: str) -> dict:
     try:
         delete_data_record(record_id)
         clear_summary_cache()
+        _clear_chat_context_cache()
         return {"status": "deleted", "id": record_id}
     except KeyError:
         raise HTTPException(status_code=404, detail="데이터를 찾을 수 없습니다.")

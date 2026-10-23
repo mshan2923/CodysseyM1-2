@@ -4,7 +4,7 @@ import time
 from firestore_service import read_analysis_rows
 
 _SUMMARY_CACHE: tuple[float, dict] | None = None
-_CACHE_SECONDS = 300
+_CACHE_SECONDS = 3600
 
 
 def clear_summary_cache() -> None:
