@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import json
+import time
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +14,10 @@ from firestore_service import (
 )
 from firestore_summary import clear_summary_cache, get_firestore_summary
 from schemas import ChatRequest, ChatResponse, ConversationCreate, ConversationUpdate, DataRecord, HealthResponse
+
+
+_CHAT_CONTEXT_CACHE: tuple[float, str] | None = None
+_CHAT_CONTEXT_CACHE_SECONDS = 3600
 
 
 @asynccontextmanager
@@ -113,12 +119,36 @@ async def data_delete(record_id: str) -> dict:
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
+    global _CHAT_CONTEXT_CACHE
     try:
         if not firestore_is_configured():
             raise RuntimeError("Firebase 인증 설정이 필요합니다.")
-        summary = get_firestore_summary()
-        rows = read_analysis_rows(limit=5000)
-        context = f"분석 요약: {summary}\nFirestore 데이터:\n{rows}"
+        now = time.monotonic()
+        if _CHAT_CONTEXT_CACHE and now - _CHAT_CONTEXT_CACHE[0] < _CHAT_CONTEXT_CACHE_SECONDS:
+            context = _CHAT_CONTEXT_CACHE[1]
+        else:
+            summary = get_firestore_summary()
+            # 작은 이벤트성 데이터(가격/패치)를 먼저 넣어 전체 컨텍스트가 잘려도
+            # 질문에 직접 필요한 시간 정보가 남도록 한다.
+            source_limits = {
+                "prices": 50_000,
+                "patches": 50_000,
+                "events": 50_000,
+                "hub": 60_000,
+                "players": 120_000,
+            }
+            source_rows = {
+                source: read_analysis_rows(source, limit=5000)
+                for source in ("prices", "patches", "events", "hub", "players")
+            }
+            sections = [f"분석 요약:\n{json.dumps(summary, ensure_ascii=False, default=str)}"]
+            for source, max_chars in source_limits.items():
+                serialized = json.dumps(source_rows[source], ensure_ascii=False, default=str)
+                if len(serialized) > max_chars:
+                    serialized = serialized[:max_chars] + "... [이 source의 일부 행은 생략됨]"
+                sections.append(f"[{source} 데이터]\n{serialized}")
+            context = "\n\n".join(sections)
+            _CHAT_CONTEXT_CACHE = (now, context)
         answer = await app.state.ai_service.chat(
             message=request.message,
             context=context,
