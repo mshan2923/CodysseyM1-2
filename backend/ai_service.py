@@ -21,6 +21,10 @@ SYSTEM_PROMPT = """너는 세피리아 게임 데이터 분석 도우미다.
 M1 분석의 표본 수, overlap, 정식 출시 효과가 섞인 한계도 필요할 때 함께 설명한다.
 """
 
+# OpenAI 토큰 한도보다 충분히 작게 유지해 Firestore 원문이 요청을 압도하지 않도록 한다.
+MAX_CONTEXT_CHARS = 120_000
+MAX_CONVERSATION_MESSAGE_CHARS = 6_000
+
 
 class CustomAIService:
     def __init__(self, settings: AISettings):
@@ -35,9 +39,21 @@ class CustomAIService:
         if not self.settings.ai_api_key:
             raise RuntimeError("AI_API_KEY가 설정되지 않았습니다. backend/.env를 확인하세요.")
 
+        trimmed_context = context[:MAX_CONTEXT_CHARS]
+        if len(context) > MAX_CONTEXT_CHARS:
+            trimmed_context += "\n\n[분석 컨텍스트가 너무 길어 이후 데이터는 생략되었습니다.]"
+
+        trimmed_conversation = [
+            {
+                "role": item.role,
+                "content": item.content[:MAX_CONVERSATION_MESSAGE_CHARS],
+            }
+            for item in conversation[-20:]
+        ]
+
         messages = [
-            {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n[분석 컨텍스트]\n{context}"},
-            *[item.model_dump() for item in conversation],
+            {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n[분석 컨텍스트]\n{trimmed_context}"},
+            *trimmed_conversation,
             {"role": "user", "content": message},
         ]
         payload = {"model": self.settings.ai_model, "messages": messages}
