@@ -46,14 +46,35 @@ class CustomAIService:
             "content-type": "application/json",
         }
 
-        async with httpx.AsyncClient(timeout=self.settings.request_timeout_seconds) as client:
-            response = await client.post(
-                f"{self.settings.ai_base_url}/chat/completions",
-                headers=headers,
-                json=payload,
-            )
-            response.raise_for_status()
-            body = response.json()
+        provider_url = f"{self.settings.ai_base_url}/chat/completions"
+
+        try:
+            async with httpx.AsyncClient(timeout=self.settings.request_timeout_seconds) as client:
+                response = await client.post(
+                    provider_url,
+                    headers=headers,
+                    json=payload,
+                )
+                response.raise_for_status()
+                body = response.json()
+        except httpx.HTTPStatusError as exc:
+            provider_body = exc.response.text.strip()
+            if len(provider_body) > 2000:
+                provider_body = f"{provider_body[:2000]}..."
+            if not provider_body:
+                provider_body = "(응답 본문이 비어 있습니다.)"
+            raise RuntimeError(
+                f"AI provider HTTP {exc.response.status_code} "
+                f"({exc.response.reason_phrase}) at {provider_url}: {provider_body}"
+            ) from exc
+        except httpx.RequestError as exc:
+            raise RuntimeError(
+                f"AI provider 연결 실패 ({type(exc).__name__}) at {provider_url}: {exc}"
+            ) from exc
+        except ValueError as exc:
+            raise RuntimeError(
+                f"AI provider가 JSON이 아닌 응답을 반환했습니다 at {provider_url}: {exc}"
+            ) from exc
 
         try:
             return body["choices"][0]["message"]["content"]

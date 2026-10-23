@@ -145,25 +145,9 @@ FIRESTORE_COLLECTION_PREFIX=
 
 API 키, Firebase 서비스 계정 JSON, `.env` 파일은 GitHub나 프론트엔드 코드에 포함하지 않습니다.
 
-## Firestore 데이터 업로드
+## Firestore 데이터
 
-현재 CSV 데이터는 다음 컬렉션으로 분리해 저장합니다.
-
-```text
-players/
-prices/
-patches/
-events/
-hub/
-```
-
-서버가 실행 중일 때 최초 1회 업로드합니다.
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8001/api/admin/seed -Method Post
-```
-
-업로드 후 조회합니다.
+운영 중인 대시보드와 AI는 CSV를 읽지 않고 Firestore만 조회합니다. 사용자는 프론트엔드 데이터 탐색 화면에서 `type`, `date`, `value`, `memo`를 입력해 데이터를 추가할 수 있습니다.
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8001/api/data/summary
@@ -177,8 +161,14 @@ Invoke-RestMethod "http://127.0.0.1:8001/api/data?source=patches&limit=10"
 | `GET` | `/` | API 안내 |
 | `GET` | `/api/health` | 서버와 AI 설정 확인 |
 | `GET` | `/api/data/summary` | Firestore 분석 요약 |
-| `GET` | `/api/data?source=patches` | 특정 데이터 컬렉션 조회 |
-| `POST` | `/api/admin/seed` | CSV를 Firestore에 업로드 |
+| `GET` | `/api/data?source=patches` | Firestore 데이터 조회 |
+| `POST` | `/api/data` | 데이터 추가 |
+| `PUT` | `/api/data/{id}` | 데이터 수정 |
+| `DELETE` | `/api/data/{id}` | 데이터 삭제 |
+| `POST` | `/api/conversations` | 대화 저장 |
+| `GET` | `/api/conversations` | 대화 목록 |
+| `GET` | `/api/conversations/{id}` | 특정 대화 조회 |
+| `DELETE` | `/api/conversations/{id}` | 대화 삭제 |
 | `POST` | `/api/chat` | 분석 컨텍스트 기반 AI 질문 |
 
 채팅 요청 예시:
@@ -258,14 +248,14 @@ Render의 `ALLOWED_ORIGINS`에는 Vercel 도메인을 넣고, 두 서비스를 �
 - [x] AI 채팅 UI
 - [x] FastAPI 서버
 - [x] 커스텀 OpenAI 호환 AI 제공자 연결
-- [x] CSV 분석 요약
+- [x] Firestore 분석 요약
 - [x] Firebase Admin SDK 연결
 - [x] Firestore 컬렉션 분리 저장
 - [x] Firestore 데이터 조회
 - [x] Render 배포 설정
 - [x] Vercel 배포용 API 주소 설정
 - [ ] 대화 기록 Firestore 저장 API
-- [ ] 데이터 CRUD UI 및 API
+- [x] 데이터 CRUD UI 및 API
 - [ ] Function Calling 또는 MCP 연동
 - [ ] 배포 환경 최종 통합 테스트
 
